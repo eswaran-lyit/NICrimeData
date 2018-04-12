@@ -1,7 +1,8 @@
 # Using R, amalgamate all of the crime data from each csv file into one dataset. 
 # Save this dataset into a csv file called AllNICrimeData. Count and show the number of rows in the AllNICrimeData dataset.
-
-csv_file_list <- list.files(path = "C:/Users/Eswaran/source/repos/NICrimeData/data", pattern = "*.csv", recursive = TRUE, full.names = TRUE)
+file_location <- paste0(getwd(), '/data')
+csv_file_list <- list.files(path = file_location, pattern = "*.csv", recursive = TRUE, full.names = TRUE)
+csv_file_list
 combine_results <- function(csv_file_list) {
     crime_data <- NULL
     for (csv_file in csv_file_list) {
@@ -31,6 +32,8 @@ str(crime_data)
 write.csv(crime_data, 'AllNICrimeData.csv', row.names = FALSE)
 sapply(crime_data, function(x) sum(is.na(x)))
 
+
+crime_data <- crime_data[!(crime_data$Location == 'No Location')]
 # Factorise the Crime type attribute. Show the modified structure.
 
 crime_type_levels <- levels(factor(crime_data$Crime.type))
@@ -56,14 +59,13 @@ unique_post_code_count <- aggregate(rep(1, nrow(cleaned_post_codes)),
                                     sum, stringsAsFactors = FALSE)
 unique_post_code_count <- data.frame(unique_post_code_count, stringsAsFactors = FALSE)
 colnames(unique_post_code_count) <- c("Postcode", "Primary_Thorfare", "Unique_count")
-
-str(unique_post_code_count)
+unique_primary_Thorfare <- unique(as.vector(unique_post_code_count$Primary_Thorfare))
 
 find_a_postcode <- function(location) {
     if (location == "" | location == "No Location" | location == "On or near ") {
         return("")
     } else {
-        popular_post_code <- tail(names(sort(table(unique_post_code_count2$Postcode[grepl(location, Primary_Thorfare, ignore.case = TRUE)]))), 1)
+        popular_post_code <- tail(names(sort(table(unique_post_code_count$Postcode[grepl(location, unique_primary_Thorfare, ignore.case = TRUE)]))), 1)
         return(if (is.null(popular_post_code)) "" else popular_post_code)
     }
 }
@@ -97,18 +99,23 @@ mising_data
 # Append the AllNICrimeData dataset with new attributes Town, County and Postcode. 
 # Use the NIPostcode dataset and match the location attribute to perform the join between both datasets. 
 # Modify Town and County attributes to become unordered factors. Show the modified AllNICrimeData structure.
+str(crime_data)
+str(cleaned_post_codes)
 
-merged_data <- merge(x = crime_data, y = cleaned_post_codes[, c("Town", "County", "Postcode")], by = "Postcode", all.x = TRUE)
+unique_post_code_location <- cleaned_post_codes[!duplicated(cleaned_post_codes$Primary_Thorfare),]
+str(unique_post_code_location)
+merged_data <- merge(x = crime_data, y = unique_post_code_location[, c("Town", "County", "Postcode")], by = "Postcode", all.x = TRUE)
 merged_data$County = factor(merged_data$County, levels = countyCodes, ordered = FALSE)
 merged_data$Town = factor(merged_data$Town, levels = countyCodes, ordered = FALSE)
 str(merged_data)
 
 # Save your modified AllNICrimeData dataset in a csv file called FinalNICrimeData.
 
-write.csv(merged_data, 'FinalNICrimeData..csv', row.names = FALSE)
+write.csv(merged_data, 'FinalNICrimeData.csv', row.names = FALSE)
 
 # Search for all crime data where location contains Strabane and postcode contains BT82. 
 # Show the first 10 rows of this data.
 
-strabane_Data <- merged_data[c(grep("Strabane", merged_data$Location, ignore.case = TRUE), grep("BT82", merged_data$Postcode, ignore.case = TRUE)),]
+filter_by_location_strabane <- merged_data[grep("Strabane", merged_data$Location, ignore.case = TRUE),]
+strabane_Data <- filter_by_location_strabane[grep("BT82", filter_by_location_strabane$Postcode, ignore.case = TRUE),]
 head(strabane_Data,10)
