@@ -1,10 +1,11 @@
+# https://github.com/eswaran-lyit/NICrimeData.git
 print(paste("Start of Amalgamation ", Sys.time()))
 # To read the csv files relative to the working directory, create the filelocation based on the working directory
-file_location <- paste0(getwd(), '/data')
-
+crime_file_location <- paste0(getwd(), '/data/crime_data/')
+postcode_file_location <- paste0(getwd(), '/data/CleanNIPostcodeData.csv')
+write_file_location <- paste0(getwd(), '/data/generated')
 # This will return the list of all csv files present under the root data folder by traversing recursively
-csv_file_list <- list.files(path = file_location, pattern = "*.csv", recursive = TRUE, full.names = TRUE)
-
+csv_file_list <- list.files(path = crime_file_location, pattern = "*.csv", recursive = TRUE, full.names = TRUE)
 # This function will take the list of CSV files names, read the contents one by one and append them together 
 # to a single data frame and return the final data frame
 combine_results <- function(csv_file_list) {
@@ -39,7 +40,7 @@ crime_data$Last.outcome.category <- NULL
 crime_data$Context <- NULL
 
 # write the cleaned data frame to the CSR file
-write.csv(crime_data, 'AllNICrimeData.csv', row.names = FALSE)
+write.csv(crime_data, paste0(write_file_location, '/AllNICrimeData.csv'), row.names = FALSE)
 
 # Remove all the data with 'No Location' value under the Location column and assign it back to crime_data
 crime_data <- crime_data[!(crime_data$Location == 'No Location'),]
@@ -61,7 +62,7 @@ str(crime_data)
 
 # reads the already cleaned post code dataset from csv file and assigns it to the cleaned_post_codes dataframe. Only these 
 # "Primary_Thorfare", "Postcode", "Town", "County" fields are read instead of all
-cleaned_post_codes <- read.csv("/data/CleanNIPostcodeData.csv", header = TRUE)[, c("Primary_Thorfare", "Postcode", "Town", "County")]
+cleaned_post_codes <- read.csv(postcode_file_location, header = TRUE)[, c("Primary_Thorfare", "Postcode", "Town", "County")]
 # from the list of post codes, unique rows are selected based on the post code value and assigned to unique_post_code
 unique_post_code <- cleaned_post_codes[!duplicated(cleaned_post_codes$Postcode),]
 # from the unique_post_code rows, unique Primary_Thorfare is selected separately and stored on unique_primary_Thorfare
@@ -93,7 +94,7 @@ head(crime_data)
 str(crime_data)
 print(paste("End of Finding Post codes for crime location ", Sys.time()))
 # write the information to a csv file for verification
-write.csv(crime_data, 'Crime-data-after-matching-postcodes.csv', row.names = FALSE)
+write.csv(crime_data, paste0(write_file_location, '/Crime-data-after-matching-postcodes.csv') , row.names = FALSE)
 
 # clear off the variables by assigning NULL as it won't be used further
 unique_post_code <- NULL
@@ -129,12 +130,13 @@ mat <- distm(unique_missing_data[, c("Longitude", "Latitude")], crime_data_lat_l
 unique_missing_data$Location <- crime_data_lat_long_unique$Location[max.col(-mat)]
 unique_missing_data$Postcode <- crime_data_lat_long_unique$Postcode[max.col(-mat)]
 # write the data to the file
-write.csv(unique_missing_data, 'Postcodes_added_for_missing_location_geosphere.csv', row.names = FALSE)
+write.csv(unique_missing_data, paste0(write_file_location, '/Postcodes_added_for_missing_location_geosphere.csv') , row.names = FALSE)
 print(paste("End of Geo Sphere ", Sys.time()))
 # clear variables which are not used further
 mat <- NULL
 crime_data_lat_long <- NULL
-
+install.packages("stringr")
+install.packages("data.table")
 library(stringr)
 library(data.table)
 # convert the lat/long to character from num, in order to perform substring
@@ -190,7 +192,7 @@ for (row in seq_len(nrow(unique_missing_data[(unique_missing_data$Location == ''
     unique_missing_data$Postcode[(unique_missing_data$Latitude == latitude & unique_missing_data$Longitude == longitude)] <- post_code
 }
 # write the data to the file
-write.csv(unique_missing_data, 'Postcodes_added_for_missing_location_through_recursion.csv', row.names = FALSE)
+write.csv(unique_missing_data, paste0(write_file_location, '/Postcodes_added_for_missing_location_through_recursion.csv') , row.names = FALSE)
 print(paste("End of Location loop ", Sys.time()))
 crime_data_lat_long_unique <- NULL
 # Convert all the lat, long, postcode, locatiocation to character to avoid error during merge
@@ -220,7 +222,7 @@ head(crime_data, 10)
 # combine the crime_data dataframe with all proper values with the missng_data dataframe which was udpated through tidy_location
 crime_data <- rbind(mising_data, crime_data)
 # store the combined result to a csv file
-write.csv(crime_data, 'crime_data_after_tidying_location.csv', row.names = FALSE)
+write.csv(crime_data, paste0(write_file_location, '/crime_data_after_tidying_location.csv') , row.names = FALSE)
 print(paste("End of final tidying of location", Sys.time()))
 
 library(data.table)
@@ -238,7 +240,7 @@ str(merged_data)
 head(merged_data, 10)
 
 # save the merged data to a csv file
-write.csv(merged_data, 'FinalNICrimeData.csv', row.names = FALSE)
+write.csv(merged_data, paste0(write_file_location, '/FinalNICrimeData.csv') , row.names = FALSE)
 # clear off variables
 town_levels <- NULL
 county_levels <- NULL
